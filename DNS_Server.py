@@ -1,230 +1,170 @@
-#!/usr/bin/env python
 
-"""
-Python DNS Client
-(C) 2014 David Lettier
-lettier.com
-A simple DNS client similar to `nslookup` or `host`.
-Does not use any DNS libraries.
-Handles only A type records.
-"""
-
-import codecs
-import sys
-import socket
-import bitstring, struct # For constructing and destructing the DNS packet.
-
-
-def to_hex_string(x):
-  """
-  Encodes either a positive integer or string to its hexadecimal representation.
-  """
-
-  result = "0"
-
-  if x.__class__.__name__ == "int" and x >= 0:
-
-    result = hex(x)
-
-    if x < 16:
-
-      result = "0" + result[2:]
-
-  elif x.__class__.__name__ == "str":
-
-    result = "".join([hex(ord(y))[2:] for y in x])
-
-  return "0x" + result
-
-
-def resolve_host_name(host_name_to):
-  """
-  Queries the DNS A record for the given host name and returns the result.
-  """
-
-  host_name_to = host_name_to.split(".")
-
-  # Construct the DNS packet consisting of header + QNAME + QTYPE + QCLASS.
-
-  DNS_QUERY_FORMAT = [
-      "hex=id"
-    , "bin=flags"
-    , "uintbe:16=qdcount"
-    , "uintbe:16=ancount"
-    , "uintbe:16=nscount"
-    , "uintbe:16=arcount"
-  ]
-
-  DNS_QUERY = {
-      "id": "0x1a2b"
-    , "flags": "0b0000000100000000" # Standard query. Ask for recursion.
-    , "qdcount": 1 # One question.
-    , "ancount": 0
-    , "nscount": 0
-    , "arcount": 0
-  }
-
-  # Construct the QNAME:
-  # size|label|size|label|size|...|label|0x00
-
-  j = 0
-
-  for i, _ in enumerate(host_name_to):
-
-    host_name_to[i] = host_name_to[i].strip()
-
-    DNS_QUERY_FORMAT.append("hex=" + "qname" + str(j))
-
-    DNS_QUERY["qname" + str(j)] = to_hex_string(len(host_name_to[i]))
-
-    j += 1
-
-    DNS_QUERY_FORMAT.append("hex=" + "qname" + str(j))
-
-    DNS_QUERY["qname" + str(j)] = to_hex_string(host_name_to[i])
-
-    j += 1
-
-  # Add a terminating byte.
-
-  DNS_QUERY_FORMAT.append("hex=qname" + str(j))
-
-  DNS_QUERY["qname" + str(j)] = to_hex_string(0)
-
-  # End QNAME.
-
-  # Set the type and class now.
-
-  DNS_QUERY_FORMAT.append("uintbe:16=qtype")
-
-  DNS_QUERY["qtype"] = 1 # For the A record.
-
-  DNS_QUERY_FORMAT.append("hex=qclass")
-
-  DNS_QUERY["qclass"] = "0x0001" # For IN or Internet.
-
-  # Convert the struct to a bit string.
-
-  data = bitstring.pack(",".join(DNS_QUERY_FORMAT), **DNS_QUERY)
-
-  # Send the packet off to the server.
-
-  DNS_IP = "8.8.8.8" # Google public DNS server IP.
-  DNS_PORT = 53 # DNS server port for queries.
-
-  READ_BUFFER = 1024 # The size of the buffer to read in the received UDP packet.
-
-  address = (DNS_IP, DNS_PORT) # Tuple needed by sendto.
-
-  client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Internet, UDP.
-
-  client.sendto(data.tobytes(), address) # Send the DNS packet to the server using the port.
-
-  # Get the response DNS packet back, decode, and print out the IP.
-
-  # Get the response and put it in data. Get the responding server address and put it in address.
-
-  data, address = client.recvfrom(READ_BUFFER)
-
-  # Convert data to bit string.
-
-  data = bitstring.BitArray(bytes=data)
-
-  # Unpack the receive DNS packet and extract the IP the host name resolved to.
-
-  # Get the host name from the QNAME located just past the received header.
-
-  host_name_from = []
-
-  # First size of the QNAME labels starts at bit 96 and goes up to bit 104.
-  # size|label|size|label|size|...|label|0x00
-
-  x = 96
-  y = x + 8
-
-  for i, _ in enumerate(host_name_to):
-
-    # Based on the size of the very next label indicated by
-    # the 1 octet/byte before the label, read in that many
-    # bits past the octet/byte indicating the very next
-    # label size.
-
-    # Get the label size in hex. Convert to an integer and times it
-    # by 8 to get the number of bits.
-
-    increment = (int(str(data[x:y].hex), 16) * 8)
-
-    x = y
-    y = x + increment
-
-    # Read in the label, converting to ASCII.
-
-    host_name_from.append(codecs.decode(data[x:y].hex, "hex_codec").decode())
-
-    # Set up the next iteration to get the next label size.
-    # Assuming here that any label size is no bigger than
-    # one byte.
-
-    x = y
-    y = x + 8 # Eight bits to a byte.
-
-  # Get the response code.
-  # This is located in the received DNS packet header at
-  # bit 28 ending at bit 32.
-
-  response_code = str(data[28:32].hex)
-
-  result = {'host_name': None, 'ip_address': None}
-
-  # Check for errors.
-
-  if (response_code == "0"):
-
-    result['host_name'] = ".".join(host_name_from)
-
-    # Assemble the IP address the host name resolved to.
-    # It is usually the last four octets of the DNS
-    # packet--at least for A records.
-
-    result['ip_address'] = ".".join([
-        str(data[-32:-24].uintbe)
-      , str(data[-24:-16].uintbe)
-      , str(data[-16:-8].uintbe)
-      , str(data[-8:].uintbe)
-    ])
-
-  elif (response_code == "1"):
-
-    print("\nFormat error. Unable to interpret query.\n")
-
-  elif (response_code == "2"):
-
-    print("\nServer failure. Unable to process query.\n")
-
-  elif (response_code == "3"):
-
-    print("\nName error. Domain name does not exist.\n")
-
-  elif (response_code == "4"):
-
-    print("\nQuery request type not supported.\n")
-
-  elif (response_code == "5"):
-
-    print("\nServer refused query.\n")
-
-  return result
-
-
-if __name__ == "__main__":
-
-  # Get the host name from the command line.
-
-  HOST_NAME = "tmz.com"
-
-  
-
-  result = resolve_host_name(HOST_NAME)
-
-  print("\nHost Name:\n" + str(result['host_name']))
-  print("\nIP Address:\n" + str(result['ip_address']) + "\n")
+from socket import *
+import bitstring
+
+
+
+
+
+def create_flag():
+    flags = {
+        "QR":"0",
+        "OPCODE":"0000",
+        "Authoritative_Answer":"0",
+        "TrunCation":"0",
+        "Recursion_Desired":"1",
+        "Recursion_Available": "0",
+        "Z":"000",
+        "RCODE":"0000"
+        
+    }
+    result = "0b"
+    for value in flags.values():
+        result += value
+    return result
+    
+
+
+def build_DNS_query(hostname, transaction_ip):
+    data = None
+    transaction_ID = transaction_ip
+    flag = create_flag()
+    QDCOUNT = 1
+    ANCOUNT = 0
+    NSCOUNT = 0
+    ARCOUNT = 0
+    
+    qname = ""
+    lenOfString = 0 #count the string length to the .
+    hostname_split = hostname.split('.')
+    temp_hostname = ""
+    for string in hostname_split:
+        lenOfString = len(string)
+        temp_hostname += "0" + str(hex(lenOfString))[2:]
+        for character in string:
+            temp_hostname += str(hex(ord(character)))[2:]
+        qname += temp_hostname
+        temp_hostname = ""
+        #qname += str(hex(ord(character)))[2:]
+    qname += str("00")
+    print(qname + "\n")
+    qtype = "01"
+    qclass  = "0x0001"
+    data = bitstring.pack("hex", transaction_ID)
+    data += bitstring.pack("bin", flag)
+    data += bitstring.pack("uintbe:16", QDCOUNT)
+    data += bitstring.pack("uintbe:16", ANCOUNT)
+    data += bitstring.pack("uintbe:16", NSCOUNT)
+    data += bitstring.pack("uintbe:16", ARCOUNT)
+    queries = ""
+    queries += bitstring.pack("hex", qname)
+    queries += bitstring.pack("uintbe:16", qtype)
+    queries += bitstring.pack("hex", qclass)
+    
+    data += bitstring.pack("hex", qname)
+    data += bitstring.pack("uintbe:16", qtype)  
+    data += bitstring.pack("hex", qclass)
+    #print(data)
+    return data, queries
+        
+    
+    
+
+def send_DNS_packet(root_ip, data):
+    port = 53
+    serverIP = root_ip
+    client_socket = socket(AF_INET, SOCK_DGRAM)
+
+    temp = data.tobytes()
+    client_socket.sendto(data.tobytes(), (serverIP, port))
+    modifiedMessage, serverAddress = client_socket.recvfrom(1024)
+    client_socket.close()
+    return modifiedMessage
+
+def prase_response_message(message, queries):
+    isFind_ip = False
+    message = bitstring.BitArray(bytes = message)
+    message = message.hex
+    queries = queries.hex
+    length_queries = len(queries)
+    location_queries = message.find(queries)
+    answer = message[length_queries + location_queries : len(message)]
+    num_authority_rr = message[location_queries - 8 : location_queries - 4]
+    num_authority_rr = int(num_authority_rr, 16)
+    num_additional_rr = message[location_queries - 4 : location_queries]
+    num_additional_rr = int(num_additional_rr, 16)
+    num_rr = num_additional_rr + num_authority_rr
+    num_answer = message[location_queries - 12 : location_queries - 8]
+    num_answer = int(num_answer, 16)
+    if num_answer != 0:
+        isFind_ip = True
+    answer_list = []
+    ip_list = []
+    start_location = 0
+    for index in range(num_rr):
+        name = answer[start_location : start_location + 4]
+        start_location += 4
+        type = answer[start_location : start_location + 4]
+        start_location += 4
+        class_ip = answer[start_location : start_location + 4]
+        start_location += 4
+        time_live = answer[start_location : start_location + 8]
+        start_location += 8
+        data_length = answer[start_location : start_location + 4]
+        data_length = int(data_length, 16)
+        start_location += 4
+        ip_hex = answer[start_location : start_location + 2 * data_length]
+        start_location += 2 * data_length
+		
+        ip_dec = ""
+        for j in range(0, 8, 2):
+            ip_dec = ip_dec + str(int(ip_hex[j : j + 2], 16))
+            if(j + 2 != 8):
+                ip_dec = ip_dec + "."
+        if type == "0001":
+            ip_list.append(ip_dec)
+    response = message[location_queries : len(message)]
+    return isFind_ip, ip_list, response
+
+def find_DNS_IP(hostname, transaction_ip):
+	root_ip = "198.41.0.4"
+	print(root_ip)
+	isFind_ip = False
+	response = ""
+	while not isFind_ip:
+		data, queries = build_DNS_query(hostname, transaction_ip)
+		message = send_DNS_packet(root_ip, data)
+		ip_list, isFind_ip, response = prase_response_message(message, queries)
+		
+		root_ip = ip_list[0]
+		print(root_ip)
+	return response
+
+def unpack_client_package(message):
+    transaction_ip = ""
+    hostname = ""
+    message = bitstring.BitArray(bytes = message)
+    message = message.hex
+    
+    transaction_ip = message[0 : 4]
+    #24
+    queries = message[24 : len(message)]
+    location_end_hostname = queries.find("00")
+    hostname = queries[0 : location_end_hostname]
+    
+    return transaction_ip, hostname
+
+if __name__ == '__main__':
+	
+	response = ""
+	client_ip = ""
+	serverPort = 12000
+	serverSocket = socket(AF_INET, SOCK_DGRAM)
+	serverSocket.bind(('', serverPort))
+	while True:
+		message, clientAddress = serverSocket.recvfrom(2048)
+		transaction_ip, hostname = unpack_client_package(message)
+		response = find_DNS_IP(hostname, transaction_ip)
+		serverSocket.sendto(response.encode(),clientAddress)
+        
+		
