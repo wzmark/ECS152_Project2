@@ -123,7 +123,8 @@ def prase_response_message(message, queries):
                 ip_dec = ip_dec + "."
         if type == "0001":
             ip_list.append(ip_dec)
-    response = message[location_queries : len(message)]
+    #response = message[location_queries : len(message)]
+    response = message
     return isFind_ip, ip_list, response
 
 def find_DNS_IP(hostname, transaction_ip):
@@ -131,14 +132,15 @@ def find_DNS_IP(hostname, transaction_ip):
 	print(root_ip)
 	isFind_ip = False
 	response = ""
+	message = ""
 	while not isFind_ip:
 		data, queries = build_DNS_query(hostname, transaction_ip)
 		message = send_DNS_packet(root_ip, data)
-		ip_list, isFind_ip, response = prase_response_message(message, queries)
+		isFind_ip, ip_list, response = prase_response_message(message, queries)
 		
 		root_ip = ip_list[0]
 		print(root_ip)
-	return response
+	return message
 
 def unpack_client_package(message):
     transaction_ip = ""
@@ -150,21 +152,39 @@ def unpack_client_package(message):
     #24
     queries = message[24 : len(message)]
     location_end_hostname = queries.find("00")
-    hostname = queries[0 : location_end_hostname]
     
+    hostname_hex = queries[0 : location_end_hostname + 2]
+    location_index = 2
+    num_character = int(hostname_hex[0 : 2], 16)
+    substring_hostname = hostname_hex[2 : location_index + num_character * 2]
+    location_index += num_character * 2
+    while num_character != 0:
+        
+        hostname += str(bytes.fromhex(substring_hostname).decode())
+        num_character = int(hostname_hex[location_index : location_index + 2], 16)
+        if num_character != 0:
+            hostname += "."
+        location_index += 2
+        substring_hostname = hostname_hex[location_index: location_index + num_character * 2]
+        location_index += num_character * 2
+        
+        
     return transaction_ip, hostname
+
 
 if __name__ == '__main__':
 	
 	response = ""
 	client_ip = ""
-	serverPort = 12000
+	serverPort = 65432
 	serverSocket = socket(AF_INET, SOCK_DGRAM)
 	serverSocket.bind(('', serverPort))
 	while True:
 		message, clientAddress = serverSocket.recvfrom(2048)
+		print("message received")
 		transaction_ip, hostname = unpack_client_package(message)
 		response = find_DNS_IP(hostname, transaction_ip)
-		serverSocket.sendto(response.encode(),clientAddress)
+		print(response)
+		serverSocket.sendto(response,clientAddress)
         
 		

@@ -69,8 +69,8 @@ def build_DNS_query(hostname):
     
 
 def send_DNS_packet(data):
-    port = 53
-    serverIP = "169.237.229.88"
+    port = 65432 #65432
+    serverIP = "127.0.0.1"
     client_socket = socket(AF_INET, SOCK_DGRAM)
 
     temp = data.tobytes()
@@ -80,25 +80,44 @@ def send_DNS_packet(data):
     return modifiedMessage
 
 def prase_response_message(message, queries):
+    
     message = bitstring.BitArray(bytes = message)
     message = message.hex
     queries = queries.hex
     length_queries = len(queries)
     location_queries = message.find(queries)
     answer = message[length_queries + location_queries : len(message)]
+    num_authority_rr = message[location_queries - 8 : location_queries - 4]
+    num_authority_rr = int(num_authority_rr, 16)
+    num_additional_rr = message[location_queries - 4 : location_queries]
+    num_additional_rr = int(num_additional_rr, 16)
+    num_rr = num_additional_rr + num_authority_rr
     num_answer = message[location_queries - 12 : location_queries - 8]
-    num_answer = int(num_answer)
-    answer_list = []
+    num_answer = int(num_answer, 16)
     ip_list = []
-    for index in range(num_answer):     
-        answer_list.append(answer[int(len(answer) / num_answer * index) : int(len(answer) / num_answer * (index + 1))])
-        ip_hex = answer_list[index][len(answer_list[index]) - 8:len(answer_list[index])]
+    start_location = 0
+    for index in range(num_answer):
+        name = answer[start_location : start_location + 4]
+        start_location += 4
+        type = answer[start_location : start_location + 4]
+        start_location += 4
+        class_ip = answer[start_location : start_location + 4]
+        start_location += 4
+        time_live = answer[start_location : start_location + 8]
+        start_location += 8
+        data_length = answer[start_location : start_location + 4]
+        data_length = int(data_length, 16)
+        start_location += 4
+        ip_hex = answer[start_location : start_location + 2 * data_length]
+        start_location += 2 * data_length
+		
         ip_dec = ""
         for j in range(0, 8, 2):
             ip_dec = ip_dec + str(int(ip_hex[j : j + 2], 16))
             if(j + 2 != 8):
                 ip_dec = ip_dec + "."
-        ip_list.append(ip_dec)
+        if type == "0001":
+            ip_list.append(ip_dec)
     return ip_list
 
 def send_HTTP_request(ip_list):
@@ -114,6 +133,7 @@ def send_HTTP_request(ip_list):
     response = client.recv(4096)  
     http_response = repr(response)
     http_response_len = len(http_response)
+    print(response.data)
 
 
 
@@ -124,6 +144,7 @@ if __name__ == '__main__':
     #socket = socket.socket()
     data, queries = build_DNS_query(hostname)
     message = send_DNS_packet(data)
+    print("123")
     ip_list = prase_response_message(message, queries)
     send_HTTP_request(ip_list)
     
