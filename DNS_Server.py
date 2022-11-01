@@ -34,8 +34,8 @@ class hostname_record:
 
 
 class ip_cache:
-    hostname_dict = {"tmz.com": [hostname_record("c00c", "0001", "0001", "000002ee", "0004", "0de2e465"), hostname_record("c00c", "0001", "0001", "000002ee", "0004", "0de2e465")]}
-    #hostname_dict = {}
+    #hostname_dict = {"tmz.com": [hostname_record("c00c", "0001", "0001", "000002ee", "0004", "0de2e465"), hostname_record("c00c", "0001", "0001", "000002ee", "0004", "0de2e465")]}
+    hostname_dict = {}
     def add_record(self, hostname, name, type, answer_class, ttl, data_length, ip_address):
         # header not include id
         if hostname not in self.hostname_dict.keys():
