@@ -142,13 +142,15 @@ def send_HTTP_request(ip_list):
 
 
 if __name__ == '__main__':
-    hostname = "tmz.com"
+    
+    hostname = ["youtube.com", "facebook.com", "tmz.com", "nytimes.com", "cnn.com"]
     port = 53
-    start_time = datetime.now()
-    data, queries = build_DNS_query(hostname)
-    message = send_DNS_packet(data)
-    end_time = datetime.now()
-    print("use time:" + str(int((end_time - start_time).microseconds)))
+    for value in hostname:
+        start_time = datetime.now()
+        data, queries = build_DNS_query(value)
+        message = send_DNS_packet(data)
+        end_time = datetime.now()
+        print("hostname: " + value + "use time:" + str(int((end_time - start_time).microseconds)))
     ip_list = prase_response_message(message, queries)
     send_HTTP_request(ip_list)
     

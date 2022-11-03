@@ -69,9 +69,9 @@ def build_DNS_query(hostname):
     
     
 
-def send_DNS_packet(data):
-    port = 65432 #65432
-    serverIP = "127.0.0.1"
+def send_DNS_packet(data, dns_ip):
+    port = 53 #65432
+    serverIP = dns_ip
     client_socket = socket(AF_INET, SOCK_DGRAM)
 
     temp = data.tobytes()
@@ -142,15 +142,20 @@ def send_HTTP_request(ip_list):
 
 
 if __name__ == '__main__':
+    dns_ip = ["142.103.1.1", "184.94.80.170"]
     hostname = "tmz.com"
     port = 53
+    for ip in dns_ip:
+        start_time = datetime.now()
+        data, queries = build_DNS_query(hostname)
+        message = send_DNS_packet(data, ip)
+        end_time = datetime.now()
+        print("use microseconds of dns" + str(ip) +":  " + str(int((end_time - start_time).microseconds)))
     start_time = datetime.now()
-    data, queries = build_DNS_query(hostname)
-    message = send_DNS_packet(data)
-    end_time = datetime.now()
-    print("use time:" + str(int((end_time - start_time).microseconds)))
     ip_list = prase_response_message(message, queries)
     send_HTTP_request(ip_list)
+    end_time = datetime.now()
+    print("use microseconds of server" + str(ip) +":  " + str(int((end_time - start_time).microseconds)))
     
     
     
