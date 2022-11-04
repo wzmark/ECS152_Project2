@@ -2,7 +2,7 @@ from datetime import datetime
 from pkgutil import ModuleInfo
 from socket import *
 import bitstring
-
+import sys
 
 
 def create_flag():
@@ -142,15 +142,19 @@ def send_HTTP_request(ip_list):
 
 
 if __name__ == '__main__':
-    
-    hostname = ["youtube.com", "facebook.com", "tmz.com", "nytimes.com", "cnn.com"]
+    hostname = ""
+    try:
+        hostname = sys.argv[1]
+    except:
+        hostname = "tmz.com"
+    #hostname = ["youtube.com", "facebook.com", "tmz.com", "nytimes.com", "cnn.com"]
     port = 53
-    for value in hostname:
-        start_time = datetime.now()
-        data, queries = build_DNS_query(value)
-        message = send_DNS_packet(data)
-        end_time = datetime.now()
-        print("hostname: " + value + "use time:" + str(int((end_time - start_time).microseconds)))
+    
+    start_time = datetime.now()
+    data, queries = build_DNS_query(hostname)
+    message = send_DNS_packet(data)
+    end_time = datetime.now()
+    print("hostname: " + hostname + "use time:" + str(int((end_time - start_time).microseconds)))
     ip_list = prase_response_message(message, queries)
     send_HTTP_request(ip_list)
     

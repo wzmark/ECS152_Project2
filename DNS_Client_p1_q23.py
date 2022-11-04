@@ -2,7 +2,7 @@ from datetime import datetime
 from pkgutil import ModuleInfo
 from socket import *
 import bitstring
-
+import sys
 
 
 def create_flag():
@@ -144,7 +144,11 @@ def send_HTTP_request(ip_list):
 
 if __name__ == '__main__':
     dns_ip = ["91.245.229.1", "142.103.1.1", "184.94.80.170"]
-    hostname = "tmz.com"
+    hostname = ""
+    try:
+        hostname = sys.argv[1]
+    except:
+        hostname = "tmz.com"
     port = 53
     for ip in dns_ip:
         

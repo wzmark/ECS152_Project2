@@ -266,7 +266,6 @@ def form_cache_response(header, len_answer, response):
 
 
 if __name__ == '__main__':
-
     response = ""
     client_ip = ""
     serverPort = 65432
