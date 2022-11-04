@@ -162,7 +162,8 @@ def prase_response_message(message, queries, hostname):
     answer_list = []
     ip_list = []
     start_location = 0
-    for index in range(num_rr):
+    
+    for index in range(num_rr + num_answer):
         name = answer[start_location: start_location + 4]
         start_location += 4
         type = answer[start_location: start_location + 4]

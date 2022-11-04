@@ -2,7 +2,7 @@ from datetime import datetime
 from pkgutil import ModuleInfo
 from socket import *
 import bitstring
-
+import sys
 
 
 def create_flag():
@@ -46,7 +46,7 @@ def build_DNS_query(hostname):
         temp_hostname = ""
         #qname += str(hex(ord(character)))[2:]
     qname += str("00")
-    print(qname + "\n")
+    
     qtype = "01"
     qclass  = "0x0001"
     data = bitstring.pack("hex", transaction_ID)
@@ -142,7 +142,11 @@ def send_HTTP_request(ip_list):
 
 
 if __name__ == '__main__':
-    hostname = "tmz.com"
+    hostname = ""
+    try:
+        hostname = sys.arg[1]
+    except:
+        hostname = "tmz.com"
     port = 53
     start_time = datetime.now()
     data, queries = build_DNS_query(hostname)

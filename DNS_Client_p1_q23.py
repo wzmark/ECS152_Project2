@@ -37,6 +37,8 @@ def build_DNS_query(hostname):
     lenOfString = 0 #count the string length to the .
     hostname_split = hostname.split('.')
     temp_hostname = ""
+    #tmz.com
+    #03tmz03com00
     for string in hostname_split:
         lenOfString = len(string)
         temp_hostname += "0" + str(hex(lenOfString))[2:]
@@ -63,18 +65,17 @@ def build_DNS_query(hostname):
     data += bitstring.pack("hex", qname)
     data += bitstring.pack("uintbe:16", qtype)  
     data += bitstring.pack("hex", qclass)
-    #print(data)
+    
     return data, queries
         
     
     
 
 def send_DNS_packet(data, dns_ip):
-    port = 53 #65432
+    port = 53 
     serverIP = dns_ip
     client_socket = socket(AF_INET, SOCK_DGRAM)
 
-    temp = data.tobytes()
     client_socket.sendto(data.tobytes(), (serverIP, port))
     modifiedMessage, serverAddress = client_socket.recvfrom(1024)
     client_socket.close()
@@ -142,20 +143,22 @@ def send_HTTP_request(ip_list):
 
 
 if __name__ == '__main__':
-    dns_ip = ["142.103.1.1", "184.94.80.170"]
+    dns_ip = ["91.245.229.1", "142.103.1.1", "184.94.80.170"]
     hostname = "tmz.com"
     port = 53
     for ip in dns_ip:
-        start_time = datetime.now()
+        
         data, queries = build_DNS_query(hostname)
+        start_time = datetime.now()
         message = send_DNS_packet(data, ip)
         end_time = datetime.now()
         print("use microseconds of dns" + str(ip) +":  " + str(int((end_time - start_time).microseconds)))
-    start_time = datetime.now()
+
     ip_list = prase_response_message(message, queries)
+    start_time = datetime.now()
     send_HTTP_request(ip_list)
     end_time = datetime.now()
-    print("use microseconds of server" + str(ip) +":  " + str(int((end_time - start_time).microseconds)))
+    print("use microseconds of hostname server" + str(ip) +":  " + str(int((end_time - start_time).microseconds)))
     
     
     
