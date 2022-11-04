@@ -144,10 +144,11 @@ def send_HTTP_request(ip_list):
 if __name__ == '__main__':
     hostname = ""
     try:
-        hostname = sys.arg[1]
+        hostname = sys.argv[1]
     except:
         hostname = "tmz.com"
     port = 53
+    print(hostname)
     start_time = datetime.now()
     data, queries = build_DNS_query(hostname)
     message = send_DNS_packet(data)

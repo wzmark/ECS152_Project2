@@ -198,12 +198,29 @@ def find_DNS_IP(hostname, transaction_ip, root_dns):
     isFind_ip = False
     response = ""
     message = ""
+    index = 0
+    print("Root server IP address: " + root_ip)
     while not isFind_ip:
         data, queries = build_DNS_query(hostname, transaction_ip)
         message = send_DNS_packet(root_ip, data)
         isFind_ip, ip_list, response = prase_response_message(message, queries, hostname)
 
-        root_ip = ip_list[0]
+        if len(ip_list) > 0:
+            
+            root_ip = ip_list[0]
+        else:
+            if not isFind_ip:
+                isSuccess_find = False
+                print("do not find")
+                break
+        
+        if index == 0:
+            print("TLD server IP address: " + root_ip)
+        elif index == 1:
+            print("Authoritative server IP address: " + root_ip)
+        else:
+            print("HTTP Server IP address : " + root_ip)
+        index += 1
         
     return message
 
@@ -257,8 +274,8 @@ if __name__ == '__main__':
     serverSocket.bind(('', serverPort))
     while True:
         message, clientAddress = serverSocket.recvfrom(2048)
-        print("message received")
         transaction_ip, hostname, header = unpack_client_package(message)
+        print("Domain: " + hostname)
         response, len_answer = find_IP_Cache(hostname)
         if response == "":
             root_dns = {
@@ -277,6 +294,8 @@ if __name__ == '__main__':
                 "m.root-servers.net": "202.12.27.33"
             }
             for key, value in root_dns.items():
+                
+
                 start_time = datetime.now()
                 response = find_DNS_IP(hostname, transaction_ip, value)
                 end_time = datetime.now()

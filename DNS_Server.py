@@ -45,6 +45,7 @@ class ip_cache:
 
     def get_record(self, hostname):
         response = ""
+        len_answer = 0
         for key, value in self.hostname_dict.items():
             if hostname == key:
                 index = 0
@@ -162,7 +163,7 @@ def prase_response_message(message, queries, hostname):
     answer_list = []
     ip_list = []
     start_location = 0
-    for index in range(num_rr):
+    for index in range(num_rr + num_answer):
         name = answer[start_location: start_location + 4]
         start_location += 4
         type = answer[start_location: start_location + 4]
@@ -202,9 +203,14 @@ def find_DNS_IP(hostname, transaction_ip):
         data, queries = build_DNS_query(hostname, transaction_ip)
         message = send_DNS_packet(root_ip, data)
         isFind_ip, ip_list, response = prase_response_message(message, queries, hostname)
-
-        root_ip = ip_list[0]
-        print(root_ip)
+        if len(ip_list) > 0:
+            root_ip = ip_list[0]
+        else:
+            if not isFind_ip:
+                isSuccess_find = False
+                print("do not return")
+                break
+        
     return message
 
 
@@ -261,9 +267,13 @@ if __name__ == '__main__':
         transaction_ip, hostname, header = unpack_client_package(message)
         response, len_answer = find_IP_Cache(hostname)
         if response == "":
+            start_time = datetime.now()
             response = find_DNS_IP(hostname, transaction_ip)
+            end_time = datetime.now()
+            print("hostname:" + hostname + " use microseconds of finding in dns" + str(hostname) +":  " + str(int((end_time - start_time).microseconds)))
             serverSocket.sendto(response, clientAddress)
         else:
+            print("hostname:" + hostname + " from cache")
             response = form_cache_response(header, len_answer, response)
             response = bitstring.pack("hex", response)
             serverSocket.sendto(response.tobytes(), clientAddress)

@@ -205,7 +205,8 @@ def find_DNS_IP(hostname, transaction_ip, root_dns):
         data, queries = build_DNS_query(hostname, transaction_ip)
         message = send_DNS_packet(root_ip, data)
         isFind_ip, ip_list, response = prase_response_message(message, queries, hostname)
-        if len(ip_list) > 0 :
+        if len(ip_list) > 0:
+            
             root_ip = ip_list[0]
         else:
             if not isFind_ip:
