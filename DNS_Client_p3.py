@@ -70,8 +70,8 @@ def build_DNS_query(hostname):
     
 
 def send_DNS_packet(data):
-    port = 53 #65432
-    serverIP = "142.103.1.1"
+    port = 65432 #65432
+    serverIP = "127.0.0.1"
     client_socket = socket(AF_INET, SOCK_DGRAM)
 
     temp = data.tobytes()
