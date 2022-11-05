@@ -67,7 +67,6 @@ def build_DNS_query(hostname):
     return data, queries
         
     
-    
 
 def send_DNS_packet(data):
     port = 65432 #65432
