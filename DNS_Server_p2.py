@@ -266,6 +266,7 @@ def form_cache_response(header, len_answer, response):
 
 
 if __name__ == '__main__':
+    
     response = ""
     client_ip = ""
     serverPort = 65432
@@ -293,12 +294,10 @@ if __name__ == '__main__':
                 "m.root-servers.net": "202.12.27.33"
             }
             for key, value in root_dns.items():
-                
-
                 start_time = datetime.now()
                 response = find_DNS_IP(hostname, transaction_ip, value)
                 end_time = datetime.now()
-                print("use microseconds of finding ip" + str(key) +":  " + str(int((end_time - start_time).microseconds)))
+                print("RTT " + str(key) +":  " + str(int((end_time - start_time).microseconds)))
             serverSocket.sendto(response, clientAddress)
         else:
             response = form_cache_response(header, len_answer, response)

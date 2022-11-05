@@ -142,6 +142,7 @@ def send_HTTP_request(ip_list):
 
 
 if __name__ == '__main__':
+    
     hostname = ""
     try:
         hostname = sys.argv[1]

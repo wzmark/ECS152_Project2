@@ -70,8 +70,8 @@ def build_DNS_query(hostname):
     
 
 def send_DNS_packet(data):
-    port = 65432 #65432
-    serverIP = "127.0.0.1"
+    port = 53 #65432
+    serverIP = "142.103.1.1"
     client_socket = socket(AF_INET, SOCK_DGRAM)
 
     temp = data.tobytes()
@@ -147,7 +147,7 @@ if __name__ == '__main__':
         hostname = sys.argv[1]
     except:
         hostname = "tmz.com"
-    #hostname = ["youtube.com", "facebook.com", "tmz.com", "nytimes.com", "cnn.com"]
+    # hostname = ["youtube.com", "facebook.com", "tmz.com", "nytimes.com", "cnn.com"]
     port = 53
     
     start_time = datetime.now()

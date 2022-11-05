@@ -48,7 +48,7 @@ def build_DNS_query(hostname):
         temp_hostname = ""
         #qname += str(hex(ord(character)))[2:]
     qname += str("00")
-    print(qname + "\n")
+    
     qtype = "01"
     qclass  = "0x0001"
     data = bitstring.pack("hex", transaction_ID)
@@ -149,20 +149,20 @@ if __name__ == '__main__':
         hostname = sys.argv[1]
     except:
         hostname = "tmz.com"
+    print("Domain: " + hostname)
     port = 53
     for ip in dns_ip:
-        
         data, queries = build_DNS_query(hostname)
         start_time = datetime.now()
         message = send_DNS_packet(data, ip)
         end_time = datetime.now()
-        print("use microseconds of dns" + str(ip) +":  " + str(int((end_time - start_time).microseconds)))
+        # print("RTT for dns " + str(ip) +":  " + str(int((end_time - start_time).microseconds)))
 
     ip_list = prase_response_message(message, queries)
     start_time = datetime.now()
     send_HTTP_request(ip_list)
     end_time = datetime.now()
-    print("use microseconds of hostname server" + str(ip) +":  " + str(int((end_time - start_time).microseconds)))
+    print("Http Server IP address: " + ip_list[0])
     
     
     

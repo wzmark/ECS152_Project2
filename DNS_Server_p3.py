@@ -291,14 +291,14 @@ if __name__ == '__main__':
                 start_time = datetime.now()
                 response, isSuccess = find_DNS_IP(hostname, transaction_ip, value)
                 end_time = datetime.now()
-                print("hostname:" + hostname + " use microseconds of finding in dns" + str(key) +":  " + str(int((end_time - start_time).microseconds)))
+                print("hostname: " + hostname + " use microseconds of finding in dns " + str(key) +": " + str(int((end_time - start_time).microseconds)))
                 if isSuccess:
                     break
             
             serverSocket.sendto(response, clientAddress)
                 
         else:
-            print("hostname:" + hostname + " from cache")
+            print("hostname: " + hostname + " from cache")
             response = form_cache_response(header, len_answer, response)
             response = bitstring.pack("hex", response)
             #print("hostname:" + hostname + " from cache")
